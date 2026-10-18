@@ -1,0 +1,431 @@
+/**
+ * Owns transient Protocol Designer UI state and notifies subscribers when it changes.
+ */
+
+import { deepEqual } from "/packages/utils/deep-equal.js";
+
+export class EditorState {
+    #expandedPhaseIds = new Set();
+    #expandedBlockId;
+
+    #selectedPhaseId;
+    #selectedBlockId;
+
+    #listeners = new Set();
+
+    #editingPhaseId;
+    #phaseNameDraft;
+    #phaseNameBaseline;
+
+    #activeBlockDraft;
+    #blockDraftBaseline;
+    #validationErrors = [];
+    #insertionTarget;
+    #editMode;
+    #copyMode;
+
+    #protocolFamilyId;
+    #plannedProtocolVersionId;
+
+    /** Returns a defensive snapshot of the current editor state. */
+    getSnapshot() {
+        return {
+            expandedPhaseIds: [...this.#expandedPhaseIds],
+            expandedBlockId: this.#expandedBlockId,
+
+            selectedPhaseId: this.#selectedPhaseId,
+            selectedBlockId: this.#selectedBlockId,
+
+            editingPhaseId: this.#editingPhaseId,
+            phaseNameDraft: this.#phaseNameDraft,
+
+            activeBlockDraft:
+                this.#activeBlockDraft === undefined
+                    ? undefined
+                    : structuredClone(this.#activeBlockDraft),
+
+            validationErrors: structuredClone(this.#validationErrors),
+
+            insertionTarget:
+                this.#insertionTarget === undefined
+                    ? undefined
+                    : structuredClone(this.#insertionTarget),
+
+            editMode: this.#editMode,
+            protocolFamilyId: this.#protocolFamilyId,
+            plannedProtocolVersionId: this.#plannedProtocolVersionId,
+            copyMode: this.#copyMode === undefined ? undefined : { ...this.#copyMode },
+        };
+    }
+
+    /** Resets transient editor state for a newly created or loaded protocol. */
+    resetProtocolSession() {
+        this.#expandedPhaseIds.clear();
+        this.#expandedBlockId = undefined;
+
+        this.#selectedPhaseId = undefined;
+        this.#selectedBlockId = undefined;
+
+        this.#editingPhaseId = undefined;
+        this.#phaseNameDraft = undefined;
+        this.#phaseNameBaseline = undefined;
+
+        this.#activeBlockDraft = undefined;
+        this.#blockDraftBaseline = undefined;
+
+        this.#validationErrors = [];
+        this.#insertionTarget = undefined;
+        this.#editMode = undefined;
+
+        this.#protocolFamilyId = undefined;
+        this.#plannedProtocolVersionId = undefined;
+
+        this.#copyMode = undefined;
+
+        this.#emit();
+    }
+
+    /** Subscribes to editor-state changes and returns an unsubscribe function. */
+    subscribe(listener) {
+        this.#listeners.add(listener);
+
+        return () => {
+            this.#listeners.delete(listener);
+        };
+    }
+
+    /** Selects one phase and clears any selected block. */
+    selectPhase(phaseId) {
+        if (this.#selectedPhaseId === phaseId && this.#selectedBlockId === undefined) {
+            return;
+        }
+
+        this.#selectedPhaseId = phaseId;
+        this.#selectedBlockId = undefined;
+        this.#emit("selection");
+    }
+
+    /** Selects one block and clears any selected phase. */
+    selectBlock(blockId) {
+        if (this.#selectedBlockId === blockId && this.#selectedPhaseId === undefined) {
+            return;
+        }
+
+        this.#selectedBlockId = blockId;
+        this.#selectedPhaseId = undefined;
+        this.#emit("selection");
+    }
+
+    /** Clears the current structural selection. */
+    clearSelection() {
+        if (this.#selectedPhaseId === undefined && this.#selectedBlockId === undefined) {
+            return;
+        }
+
+        this.#selectedPhaseId = undefined;
+        this.#selectedBlockId = undefined;
+        this.#emit("selection");
+    }
+
+    /** Expands a phase by ID. */
+    expandPhase(phaseId) {
+        if (this.#expandedPhaseIds.has(phaseId)) {
+            return;
+        }
+
+        this.#expandedPhaseIds.add(phaseId);
+        this.#emit();
+    }
+
+    /** Collapses a phase by ID. */
+    collapsePhase(phaseId) {
+        if (!this.#expandedPhaseIds.delete(phaseId)) {
+            return;
+        }
+
+        this.#emit();
+    }
+
+    /** Toggles a phase's expanded state. */
+    togglePhase(phaseId) {
+        if (this.#expandedPhaseIds.has(phaseId)) {
+            this.#expandedPhaseIds.delete(phaseId);
+        } else {
+            this.#expandedPhaseIds.add(phaseId);
+        }
+
+        this.#emit();
+    }
+
+    /** Expands a block by ID. */
+    expandBlock(blockId) {
+        if (this.#expandedBlockId === blockId) {
+            return;
+        }
+
+        this.#expandedBlockId = blockId;
+        this.#emit();
+    }
+
+    /** Collapses the currently expanded block. */
+    collapseBlock() {
+        if (this.#expandedBlockId === undefined) {
+            return;
+        }
+
+        this.#expandedBlockId = undefined;
+        this.#emit();
+    }
+
+    /** Starts editing a phase name from its committed value. */
+    startPhaseNameEdit(phaseId, name) {
+        this.#editingPhaseId = phaseId;
+        this.#phaseNameDraft = name;
+        this.#phaseNameBaseline = name;
+
+        this.#emit();
+    }
+
+    /** Updates the active phase-name draft. */
+    updatePhaseNameDraft(name) {
+        if (this.#editingPhaseId === undefined) {
+            throw new Error("Cannot update phase name because no phase-name edit is active.");
+        }
+
+        if (this.#phaseNameDraft === name) {
+            return;
+        }
+
+        this.#phaseNameDraft = name;
+
+        this.#emit();
+    }
+
+    /** Closes the active phase-name edit and discards its draft state. */
+    closePhaseNameEdit() {
+        if (this.#editingPhaseId === undefined) {
+            return;
+        }
+
+        this.#editingPhaseId = undefined;
+        this.#phaseNameDraft = undefined;
+        this.#phaseNameBaseline = undefined;
+
+        this.#emit();
+    }
+
+    /** Returns whether the active phase-name draft differs from its baseline. */
+    isPhaseNameDraftDirty() {
+        if (this.#phaseNameDraft === undefined || this.#phaseNameBaseline === undefined) {
+            return false;
+        }
+
+        return this.#phaseNameDraft !== this.#phaseNameBaseline;
+    }
+
+    /** Starts a block draft and records its initial baseline. */
+    startBlockDraft(draft) {
+        this.#activeBlockDraft = structuredClone(draft);
+        this.#blockDraftBaseline = structuredClone(draft);
+
+        this.#emit();
+    }
+
+    /** Updates the active block draft. */
+    updateBlockDraft(updates) {
+        if (this.#activeBlockDraft === undefined) {
+            throw new Error("Cannot update block draft because no block draft is active.");
+        }
+
+        this.#activeBlockDraft = {
+            ...this.#activeBlockDraft,
+            ...structuredClone(updates),
+        };
+
+        this.#emit();
+    }
+
+    /** Starts or switches the active structural copy operation. */
+    setCopyMode(entityType, sourceId) {
+        if (entityType !== "phase" && entityType !== "block") {
+            throw new Error(`Unsupported copy entity type: "${entityType}".`);
+        }
+
+        this.#copyMode = {
+            entityType,
+            sourceId,
+        };
+
+        this.#emit();
+    }
+
+    /** Clears the active structural copy operation. */
+    clearCopyMode() {
+        if (this.#copyMode === undefined) {
+            return;
+        }
+
+        this.#copyMode = undefined;
+        this.#emit();
+    }
+
+    /** Returns whether the active block draft differs from its baseline. */
+    isBlockDraftDirty() {
+        if (this.#activeBlockDraft === undefined || this.#blockDraftBaseline === undefined) {
+            return false;
+        }
+
+        return !deepEqual(this.#activeBlockDraft, this.#blockDraftBaseline);
+    }
+
+    /** Discards the active block draft and its baseline. */
+    cancelBlockDraft() {
+        if (this.#activeBlockDraft === undefined) {
+            return;
+        }
+
+        this.#activeBlockDraft = undefined;
+        this.#blockDraftBaseline = undefined;
+
+        this.#emit();
+    }
+
+    /** Replaces the current validation errors. */
+    setValidationErrors(errors) {
+        if (deepEqual(this.#validationErrors, errors)) {
+            return;
+        }
+
+        this.#validationErrors = structuredClone(errors);
+        this.#emit();
+    }
+
+    /** Clears all validation errors. */
+    clearValidationErrors() {
+        if (this.#validationErrors.length === 0) {
+            return;
+        }
+
+        this.#validationErrors = [];
+        this.#emit();
+    }
+
+    /** Sets the concrete insertion target. */
+    setInsertionTarget(insertion) {
+        if (deepEqual(this.#insertionTarget, insertion)) {
+            return;
+        }
+
+        this.#insertionTarget = structuredClone(insertion);
+        this.#emit();
+    }
+
+    /** Clears the pending insertion target. */
+    clearInsertionTarget() {
+        if (this.#insertionTarget === undefined) {
+            return;
+        }
+
+        this.#insertionTarget = undefined;
+        this.#emit();
+    }
+
+    /** Sets the active structural edit mode. */
+    setEditMode(mode) {
+        if (mode !== undefined && mode !== "phase" && mode !== "block") {
+            throw new Error(`Unsupported edit mode: "${mode}".`);
+        }
+
+        if (this.#editMode === mode) {
+            return;
+        }
+
+        this.#editMode = mode;
+        this.#copyMode = undefined;
+
+        this.#emit();
+    }
+
+    /** Clears the active structural edit mode. */
+    clearEditMode() {
+        if (this.#editMode === undefined) {
+            return;
+        }
+
+        this.#editMode = undefined;
+        this.#copyMode = undefined;
+
+        this.#emit();
+    }
+
+    /** Opens a block editor with a new active draft. */
+    openBlockDraft(blockId, draft) {
+        this.#expandedBlockId = blockId;
+
+        this.#activeBlockDraft = structuredClone(draft);
+
+        this.#blockDraftBaseline = structuredClone(draft);
+
+        this.#validationErrors = [];
+
+        this.#emit();
+    }
+
+    /** Opens a new block draft at a concrete insertion target. */
+    openBlockCreateDraft(blockId, draft, insertionTarget) {
+        this.#insertionTarget = structuredClone(insertionTarget);
+
+        this.#expandedBlockId = blockId;
+        this.#activeBlockDraft = structuredClone(draft);
+        this.#blockDraftBaseline = structuredClone(draft);
+        this.#validationErrors = [];
+
+        this.#emit();
+    }
+
+    /** Closes the active block editor and clears its draft state. */
+    closeBlockDraft() {
+        this.#expandedBlockId = undefined;
+        this.#activeBlockDraft = undefined;
+        this.#blockDraftBaseline = undefined;
+        this.#validationErrors = [];
+
+        this.#emit();
+    }
+
+    /** Sets the persistence identity of the protocol currently being edited. */
+    setProtocolPersistenceIdentity({ protocolFamilyId, plannedProtocolVersionId }) {
+        if (
+            protocolFamilyId === this.#protocolFamilyId &&
+            plannedProtocolVersionId === this.#plannedProtocolVersionId
+        ) {
+            return;
+        }
+
+        this.#protocolFamilyId = protocolFamilyId;
+        this.#plannedProtocolVersionId = plannedProtocolVersionId;
+
+        this.#emit();
+    }
+
+    /** Clears the persistence identity of the protocol currently being edited. */
+    clearProtocolPersistenceIdentity() {
+        if (this.#protocolFamilyId === undefined && this.#plannedProtocolVersionId === undefined) {
+            return;
+        }
+
+        this.#protocolFamilyId = undefined;
+        this.#plannedProtocolVersionId = undefined;
+
+        this.#emit();
+    }
+
+    /** Notifies all subscribers with the current editor-state snapshot. */
+    #emit(changeType = "full") {
+        const snapshot = this.getSnapshot();
+
+        for (const listener of this.#listeners) {
+            listener(snapshot, changeType);
+        }
+    }
+}

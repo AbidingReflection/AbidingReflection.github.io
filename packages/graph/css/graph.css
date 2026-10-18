@@ -1,0 +1,213 @@
+.graph-renderer {
+    color: var(--graph-text-color);
+    pointer-events: none;
+}
+
+.graph-series__line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-axes {
+    pointer-events: none;
+}
+
+.graph-grid__line {
+    stroke: currentColor;
+    stroke-opacity: 0.12;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-axis__tick {
+    stroke: currentColor;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-axis__label {
+    fill: currentColor;
+    font-size: clamp(8px, 6cqh, 11px);
+}
+
+.graph-axis__line {
+    stroke: currentColor;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-axis__title {
+    font-size: clamp(0.6rem, 6cqh, 0.8rem);
+}
+
+.graph-axis__title--y {
+    font-size: clamp(0.65rem, 4cqh, 0.9rem);
+}
+
+.graph-phase-boundary {
+    stroke: currentColor;
+    stroke-opacity: 0.28;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-phase-region {
+    opacity: 0.18;
+}
+
+.graph-phase-band {
+    opacity: 0.95;
+}
+
+.graph-phase-region--0 {
+    fill: var(--graph-phase-fill-0);
+}
+
+.graph-phase-region--1 {
+    fill: var(--graph-phase-fill-1);
+}
+
+.graph-phase-region--2 {
+    fill: var(--graph-phase-fill-2);
+}
+
+.graph-phase-region--3 {
+    fill: var(--graph-phase-fill-3);
+}
+
+.graph-phase-region--4 {
+    fill: var(--graph-phase-fill-4);
+}
+
+.graph-phase-region--5 {
+    fill: var(--graph-phase-fill-5);
+}
+
+.graph-phase-region--6 {
+    fill: var(--graph-phase-fill-6);
+}
+
+.graph-phase-region--7 {
+    fill: var(--graph-phase-fill-7);
+}
+
+.graph-phase-region--8 {
+    fill: var(--graph-phase-fill-8);
+}
+
+.graph-phase-region--9 {
+    fill: var(--graph-phase-fill-9);
+}
+
+.graph-phase-band--0 {
+    fill: var(--graph-phase-band-fill-0);
+}
+
+.graph-phase-band--1 {
+    fill: var(--graph-phase-band-fill-1);
+}
+
+.graph-phase-band--2 {
+    fill: var(--graph-phase-band-fill-2);
+}
+
+.graph-phase-band--3 {
+    fill: var(--graph-phase-band-fill-3);
+}
+
+.graph-phase-band--4 {
+    fill: var(--graph-phase-band-fill-4);
+}
+
+.graph-phase-band--5 {
+    fill: var(--graph-phase-band-fill-5);
+}
+
+.graph-phase-band--6 {
+    fill: var(--graph-phase-band-fill-6);
+}
+
+.graph-phase-band--7 {
+    fill: var(--graph-phase-band-fill-7);
+}
+
+.graph-phase-band--8 {
+    fill: var(--graph-phase-band-fill-8);
+}
+
+.graph-phase-band--9 {
+    fill: var(--graph-phase-band-fill-9);
+}
+
+.graph-phase-label {
+    fill: var(--graph-text-color);
+    font-size: clamp(11px, 5cqh, 13px);
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.graph-block-boundary {
+    stroke: var(--graph-block-boundary-color);
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+    stroke-dasharray: 1 4;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-block-region {
+    fill: transparent;
+    pointer-events: none;
+}
+
+.graph-phase-region--selected {
+    opacity: 0.7;
+    stroke: var(--graph-selection-color);
+    stroke-opacity: 0.9;
+    stroke-width: 2;
+}
+
+.graph-phase-band--selected {
+    opacity: 0.7;
+}
+
+.graph-block-region--selected {
+    fill: currentColor;
+    fill-opacity: 0.08;
+
+    stroke: var(--graph-selection-color);
+    stroke-opacity: 0.9;
+    stroke-width: 2;
+
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-empty-state {
+    fill: var(--graph-text-color);
+    opacity: 0.55;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+@media print {
+    .graph-axis__label {
+        font-size: 7px;
+    }
+
+    .graph-axis__title {
+        font-size: 0.45rem;
+    }
+
+    .graph-axis__title--y {
+        font-size: 0.45rem;
+    }
+
+    .graph-phase-label {
+        font-size: 7px;
+    }
+}

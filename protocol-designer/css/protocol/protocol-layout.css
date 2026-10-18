@@ -1,0 +1,21 @@
+.protocol-content {
+    padding: 6px;
+    overflow-y: scroll;
+}
+
+.protocol-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phase-card--selected,
+.block-card--selected {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.protocol-tree:focus,
+.protocol-tree:focus-visible {
+    outline: none;
+}

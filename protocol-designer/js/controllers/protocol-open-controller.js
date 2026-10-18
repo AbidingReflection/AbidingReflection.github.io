@@ -1,0 +1,132 @@
+import { ActivityType } from "/packages/protocol-core/models/activity-type.js";
+import { CalibrationProfile } from "/packages/protocol-core/models/calibration-profile.js";
+import { MachineProfile } from "/packages/protocol-core/models/machine-profile.js";
+
+/** Coordinates opening persisted protocol families into the Protocol Designer. */
+export class ProtocolOpenController {
+    #protocolModel;
+    #editorState;
+    #protocolSessionState;
+    #preferences;
+    #persistenceService;
+    #activityTypeVersionRepository;
+    #machineProfileVersionRepository;
+    #calibrationProfileVersionRepository;
+
+    /** Creates a controller for opening persisted protocol families. */
+    constructor({
+        protocolModel,
+        editorState,
+        protocolSessionState,
+        preferences,
+        persistenceService,
+        activityTypeVersionRepository,
+        machineProfileVersionRepository,
+        calibrationProfileVersionRepository,
+    }) {
+        this.#protocolModel = protocolModel;
+        this.#editorState = editorState;
+        this.#protocolSessionState = protocolSessionState;
+        this.#preferences = preferences;
+        this.#persistenceService = persistenceService;
+        this.#activityTypeVersionRepository = activityTypeVersionRepository;
+        this.#machineProfileVersionRepository = machineProfileVersionRepository;
+        this.#calibrationProfileVersionRepository = calibrationProfileVersionRepository;
+    }
+
+    /** Opens the latest planned protocol version for a protocol family. */
+    openProtocolFamily(protocolFamilyId) {
+        const protocolFamily = this.#persistenceService.getProtocolFamily(protocolFamilyId);
+
+        if (protocolFamily === undefined) {
+            throw new Error(`Protocol family "${protocolFamilyId}" was not found.`);
+        }
+
+        const plannedProtocolVersions =
+            this.#persistenceService.listPlannedProtocolVersions(protocolFamilyId);
+
+        if (plannedProtocolVersions.length === 0) {
+            throw new Error(
+                `Protocol family "${protocolFamilyId}" has no planned protocol versions.`,
+            );
+        }
+
+        const latestVersion = plannedProtocolVersions.reduce((latest, version) =>
+            version.versionNumber > latest.versionNumber ? version : latest,
+        );
+
+        const activityTypeVersion = this.#activityTypeVersionRepository.getById(
+            latestVersion.dependencies.activityTypeVersionId,
+        );
+
+        if (activityTypeVersion === undefined) {
+            throw new Error(
+                `Activity type version "${latestVersion.dependencies.activityTypeVersionId}" was not found.`,
+            );
+        }
+
+        let machineProfileVersion;
+
+        if (latestVersion.dependencies.machineProfileVersionId !== undefined) {
+            machineProfileVersion = this.#machineProfileVersionRepository.getById(
+                latestVersion.dependencies.machineProfileVersionId,
+            );
+
+            if (machineProfileVersion === undefined) {
+                throw new Error(
+                    `Machine profile version "${latestVersion.dependencies.machineProfileVersionId}" was not found.`,
+                );
+            }
+        }
+
+        let calibrationProfileVersion;
+
+        if (latestVersion.dependencies.calibrationProfileVersionId !== undefined) {
+            calibrationProfileVersion = this.#calibrationProfileVersionRepository.getById(
+                latestVersion.dependencies.calibrationProfileVersionId,
+            );
+
+            if (calibrationProfileVersion === undefined) {
+                throw new Error(
+                    `Calibration profile version "${latestVersion.dependencies.calibrationProfileVersionId}" was not found.`,
+                );
+            }
+        }
+
+        const activityType = new ActivityType(activityTypeVersion.definition);
+
+        const machineProfile =
+            machineProfileVersion === undefined
+                ? undefined
+                : new MachineProfile(machineProfileVersion.definition, activityType);
+
+        const calibrationProfile =
+            calibrationProfileVersion === undefined
+                ? undefined
+                : new CalibrationProfile(calibrationProfileVersion.definition, machineProfile);
+
+        this.#protocolModel.replaceProtocol(
+            latestVersion.protocol,
+            activityType,
+            machineProfile,
+            calibrationProfile,
+        );
+
+        this.#editorState.setProtocolPersistenceIdentity({
+            protocolFamilyId,
+            plannedProtocolVersionId: latestVersion.id,
+        });
+
+        this.#protocolSessionState.setBaseline(this.#protocolModel.getSnapshot());
+
+        this.#preferences.setLastSetupContext({
+            activityType,
+            machineProfile,
+            calibrationProfile,
+        });
+
+        this.#preferences.setLastProtocolFamilyId(protocolFamilyId);
+
+        return latestVersion;
+    }
+}

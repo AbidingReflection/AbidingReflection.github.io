@@ -1,0 +1,332 @@
+/**
+ * ProtocolGraphStructureRenderer responsibilities:
+ * - Render protocol structure overlays into an existing SVG element.
+ * - Map structural time ranges through an existing graph layout.
+ * - Own and replace only its structure-related SVG content.
+ * - Keep protocol semantics and structure-selection policy outside SVG rendering.
+ */
+
+import { roundSvgCoordinate } from "/packages/graph/svg-point-precision.js";
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const SVG_COORDINATE_PRECISION = 2;
+const DEFAULT_PHASE_BAND_HEIGHT = 20;
+const DEFAULT_PHASE_BAND_GAP = 4;
+
+/** Renders graph structure overlays into an existing SVG element. */
+export class ProtocolGraphStructureRenderer {
+    #svg;
+    #rootGroup;
+
+    /** Creates a structure renderer for an existing SVG element. */
+    constructor(svgElement) {
+        this.#svg = svgElement;
+        this.#rootGroup = this.#createRootGroup();
+    }
+
+    /** Renders protocol structure for a graph layout. */
+    render({
+        layout,
+        phases = [],
+        blocks = [],
+        selectedPhaseId = undefined,
+        selectedBlockId = undefined,
+        phaseBandHeight = DEFAULT_PHASE_BAND_HEIGHT,
+        phaseBandGap = DEFAULT_PHASE_BAND_GAP,
+    }) {
+        if (!Array.isArray(phases)) {
+            throw new TypeError("ProtocolGraphStructureRenderer phases must be an array.");
+        }
+
+        if (!Array.isArray(blocks)) {
+            throw new TypeError("ProtocolGraphStructureRenderer blocks must be an array.");
+        }
+
+        this.#clearRootGroup();
+
+        const plot = layout.plot;
+
+        const phaseRegions = [];
+        const phaseBands = [];
+        const phaseLabels = [];
+
+        for (let index = 0; index < phases.length; index += 1) {
+            const phase = phases[index];
+            const isSelected = phase.id === selectedPhaseId;
+
+            const xStart = roundSvgCoordinate(
+                layout.xAtTime(phase.startTimeMs),
+                SVG_COORDINATE_PRECISION,
+            );
+
+            const xEnd = roundSvgCoordinate(
+                layout.xAtTime(phase.endTimeMs),
+                SVG_COORDINATE_PRECISION,
+            );
+
+            phaseRegions.push(
+                this.#createPhaseRegion(plot, phase, index, xStart, xEnd, isSelected),
+            );
+
+            phaseBands.push(
+                this.#createPhaseBand(
+                    plot,
+                    phase.id,
+                    index,
+                    xStart,
+                    xEnd,
+                    isSelected,
+                    phaseBandHeight,
+                    phaseBandGap,
+                ),
+            );
+
+            if (xEnd > xStart) {
+                phaseLabels.push(
+                    this.#createPhaseLabel(
+                        plot,
+                        phase.label,
+                        xStart,
+                        xEnd,
+                        phaseBandHeight,
+                        phaseBandGap,
+                    ),
+                );
+            }
+        }
+
+        this.#rootGroup.append(...phaseRegions, ...phaseBands, ...phaseLabels);
+
+        for (const block of blocks) {
+            const isSelected = block.id === selectedBlockId;
+
+            const xStart = roundSvgCoordinate(
+                layout.xAtTime(block.startTimeMs),
+                SVG_COORDINATE_PRECISION,
+            );
+
+            const xEnd = roundSvgCoordinate(
+                layout.xAtTime(block.endTimeMs),
+                SVG_COORDINATE_PRECISION,
+            );
+
+            this.#rootGroup.append(this.#createBlockRegion(plot, block, xStart, xEnd, isSelected));
+        }
+
+        for (let index = 1; index < blocks.length; index += 1) {
+            const previousBlock = blocks[index - 1];
+            const block = blocks[index];
+
+            if (block.phaseId !== previousBlock.phaseId) {
+                continue;
+            }
+
+            const x = roundSvgCoordinate(
+                layout.xAtTime(block.startTimeMs),
+                SVG_COORDINATE_PRECISION,
+            );
+
+            this.#rootGroup.append(this.#createBlockBoundary(plot, x));
+        }
+
+        for (let index = 1; index < phases.length; index += 1) {
+            const boundaryTimeMs = phases[index].startTimeMs;
+
+            const x = roundSvgCoordinate(layout.xAtTime(boundaryTimeMs), SVG_COORDINATE_PRECISION);
+
+            this.#rootGroup.append(this.#createPhaseBoundary(plot, x));
+        }
+    }
+
+    /** Updates structure selection styling without rebuilding SVG content. */
+    updateSelection({ selectedPhaseId = undefined, selectedBlockId = undefined } = {}) {
+        const selectedPhaseRegion = this.#rootGroup.querySelector(".graph-phase-region--selected");
+
+        const selectedPhaseBand = this.#rootGroup.querySelector(".graph-phase-band--selected");
+
+        const selectedBlockRegion = this.#rootGroup.querySelector(".graph-block-region--selected");
+
+        selectedPhaseRegion?.classList.remove("graph-phase-region--selected");
+        selectedPhaseBand?.classList.remove("graph-phase-band--selected");
+        selectedBlockRegion?.classList.remove("graph-block-region--selected");
+
+        if (selectedPhaseId !== undefined) {
+            const phaseRegion = this.#rootGroup.querySelector(
+                `.graph-phase-region[data-phase-id="${CSS.escape(selectedPhaseId)}"]`,
+            );
+
+            const phaseBand = this.#rootGroup.querySelector(
+                `.graph-phase-band[data-phase-id="${CSS.escape(selectedPhaseId)}"]`,
+            );
+
+            phaseRegion?.classList.add("graph-phase-region--selected");
+            phaseBand?.classList.add("graph-phase-band--selected");
+
+            return;
+        }
+
+        if (selectedBlockId !== undefined) {
+            const blockRegion = this.#rootGroup.querySelector(
+                `.graph-block-region[data-block-id="${CSS.escape(selectedBlockId)}"]`,
+            );
+
+            blockRegion?.classList.add("graph-block-region--selected");
+        }
+    }
+
+    /** Creates the renderer-owned SVG group between axes and series content. */
+    #createRootGroup() {
+        const group = document.createElementNS(SVG_NAMESPACE, "g");
+
+        group.setAttribute("class", "graph-structure");
+
+        const seriesGroup = this.#svg.querySelector(".graph-renderer");
+
+        if (seriesGroup === null) {
+            this.#svg.append(group);
+        } else {
+            this.#svg.insertBefore(group, seriesGroup);
+        }
+
+        return group;
+    }
+
+    /** Removes previously rendered structure content. */
+    #clearRootGroup() {
+        this.#rootGroup.replaceChildren();
+    }
+
+    /** Creates one vertical phase boundary across the plot area. */
+    #createPhaseBoundary(plot, x) {
+        const line = document.createElementNS(SVG_NAMESPACE, "line");
+
+        line.setAttribute("class", "graph-phase-boundary");
+        line.setAttribute("x1", String(x));
+        line.setAttribute("x2", String(x));
+        line.setAttribute("y1", String(roundSvgCoordinate(plot.top, SVG_COORDINATE_PRECISION)));
+        line.setAttribute("y2", String(roundSvgCoordinate(plot.bottom, SVG_COORDINATE_PRECISION)));
+
+        return line;
+    }
+
+    /** Creates one block interaction region inside the plot. */
+    #createBlockRegion(plot, block, xStart, xEnd, isSelected) {
+        const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+        const width = roundSvgCoordinate(Math.max(0, xEnd - xStart), SVG_COORDINATE_PRECISION);
+
+        const classes = ["graph-block-region"];
+
+        if (isSelected) {
+            classes.push("graph-block-region--selected");
+        }
+
+        rect.setAttribute("class", classes.join(" "));
+        rect.setAttribute("data-block-id", block.id);
+        rect.setAttribute("data-phase-id", block.phaseId);
+        rect.setAttribute("x", String(xStart));
+        rect.setAttribute("y", String(roundSvgCoordinate(plot.top, SVG_COORDINATE_PRECISION)));
+        rect.setAttribute("width", String(width));
+        rect.setAttribute(
+            "height",
+            String(
+                roundSvgCoordinate(Math.max(0, plot.bottom - plot.top), SVG_COORDINATE_PRECISION),
+            ),
+        );
+
+        return rect;
+    }
+
+    /** Creates one phase-colored background region inside the plot. */
+    #createPhaseRegion(plot, phase, index, xStart, xEnd, isSelected) {
+        const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+        const width = roundSvgCoordinate(Math.max(0, xEnd - xStart), SVG_COORDINATE_PRECISION);
+
+        const classes = ["graph-phase-region", `graph-phase-region--${index}`];
+
+        if (isSelected) {
+            classes.push("graph-phase-region--selected");
+        }
+
+        rect.setAttribute("class", classes.join(" "));
+        rect.setAttribute("data-phase-id", phase.id);
+        rect.setAttribute("x", String(xStart));
+        rect.setAttribute("y", String(roundSvgCoordinate(plot.top, SVG_COORDINATE_PRECISION)));
+        rect.setAttribute("width", String(width));
+        rect.setAttribute(
+            "height",
+            String(
+                roundSvgCoordinate(Math.max(0, plot.bottom - plot.top), SVG_COORDINATE_PRECISION),
+            ),
+        );
+
+        return rect;
+    }
+
+    /** Creates one vertical block boundary across the plot area. */
+    #createBlockBoundary(plot, x) {
+        const line = document.createElementNS(SVG_NAMESPACE, "line");
+
+        line.setAttribute("class", "graph-block-boundary");
+        line.setAttribute("x1", String(x));
+        line.setAttribute("x2", String(x));
+        line.setAttribute("y1", String(roundSvgCoordinate(plot.top, SVG_COORDINATE_PRECISION)));
+        line.setAttribute("y2", String(roundSvgCoordinate(plot.bottom, SVG_COORDINATE_PRECISION)));
+
+        return line;
+    }
+
+    /** Creates one phase band above the plot. */
+    #createPhaseBand(
+        plot,
+        phaseId,
+        index,
+        xStart,
+        xEnd,
+        isSelected,
+        phaseBandHeight,
+        phaseBandGap,
+    ) {
+        const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+        const bandBottom = plot.top - phaseBandGap;
+        const bandTop = bandBottom - phaseBandHeight;
+        const width = roundSvgCoordinate(Math.max(0, xEnd - xStart), SVG_COORDINATE_PRECISION);
+
+        const classes = ["graph-phase-band", `graph-phase-band--${index}`];
+
+        if (isSelected) {
+            classes.push("graph-phase-band--selected");
+        }
+
+        rect.setAttribute("class", classes.join(" "));
+        rect.setAttribute("data-phase-id", phaseId);
+        rect.setAttribute("x", String(xStart));
+        rect.setAttribute("y", String(roundSvgCoordinate(bandTop, SVG_COORDINATE_PRECISION)));
+        rect.setAttribute("width", String(width));
+        rect.setAttribute(
+            "height",
+            String(roundSvgCoordinate(phaseBandHeight, SVG_COORDINATE_PRECISION)),
+        );
+
+        return rect;
+    }
+
+    /** Creates one centered phase label inside its band. */
+    #createPhaseLabel(plot, label, xStart, xEnd, phaseBandHeight, phaseBandGap) {
+        const text = document.createElementNS(SVG_NAMESPACE, "text");
+        const bandBottom = plot.top - phaseBandGap;
+        const centerX = roundSvgCoordinate((xStart + xEnd) / 2, SVG_COORDINATE_PRECISION);
+        const centerY = roundSvgCoordinate(
+            bandBottom - phaseBandHeight / 2,
+            SVG_COORDINATE_PRECISION,
+        );
+
+        text.setAttribute("class", "graph-phase-label");
+        text.setAttribute("x", String(centerX));
+        text.setAttribute("y", String(centerY));
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
+        text.textContent = String(label);
+
+        return text;
+    }
+}

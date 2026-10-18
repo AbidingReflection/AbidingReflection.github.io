@@ -1,0 +1,55 @@
+.totals-ribbon {
+    position: fixed;
+    z-index: 90;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+
+    height: var(--totals-height);
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    border-top: 1px solid var(--color-header-divider);
+
+    background: var(--color-header);
+    color: var(--color-header-text);
+
+    box-shadow: var(--shadow-footer);
+}
+
+.total {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 180px;
+    padding: 2px 22px;
+
+    border-right: 1px solid var(--color-header-divider-subtle);
+
+    text-align: center;
+}
+
+.total:last-child {
+    border-right: 0;
+}
+
+.total__label {
+    color: var(--color-header-muted);
+
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.total__value {
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}

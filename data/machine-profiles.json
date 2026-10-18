@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "machineProfiles": [
+    {
+      "id": "true-treadmill-aquatic-center",
+      "name": "True Treadmill - Aquatic Center",
+      "activityTypeId": "treadmill",
+      "variables": {
+        "speed": {
+          "controlMode": "machine-set",
+          "min": 0.5,
+          "max": 10,
+          "increment": 0.1,
+          "progressionTypes": [
+            "steady",
+            "stepped"
+          ]
+        },
+        "incline": {
+          "controlMode": "machine-set",
+          "min": 0,
+          "max": 10,
+          "increment": 0.5,
+          "progressionTypes": [
+            "steady",
+            "stepped"
+          ]
+        }
+      }
+    },
+    {
+      "id": "true-elliptical-aquatic-center",
+      "name": "True Elliptical - Aquatic Center",
+      "activityTypeId": "elliptical",
+      "variables": {
+        "cadence": {
+          "controlMode": "user-produced",
+          "progressionTypes": [
+            "steady",
+            "linear",
+            "stepped"
+          ]
+        },
+        "resistance": {
+          "controlMode": "machine-set",
+          "min": 1,
+          "max": 20,
+          "increment": 1,
+          "progressionTypes": [
+            "steady",
+            "stepped"
+          ]
+        }
+      }
+    },
+    {
+  "id": "dev-incompatible-elliptical",
+  "name": "DEV - Intentionally Incompatible Elliptical",
+  "activityTypeId": "elliptical",
+  "variables": {
+    "cadence": {
+      "controlMode": "user-produced",
+      "progressionTypes": [
+        "steady"
+      ]
+    },
+    "resistance": {
+      "controlMode": "machine-set",
+      "min": 1,
+      "max": 5,
+      "increment": 2,
+      "progressionTypes": [
+        "steady"
+      ]
+    }
+  }
+},
+    {
+      "id": "true-recumbent-bike-aquatic-center",
+      "name": "True Recumbent Stationary Bike - Aquatic Center",
+      "activityTypeId": "stationary-bike",
+      "variables": {
+        "cadence": {
+          "controlMode": "user-produced",
+          "progressionTypes": [
+            "steady",
+            "linear",
+            "stepped"
+          ]
+        },
+        "resistance": {
+          "controlMode": "machine-set",
+          "min": 1,
+          "max": 20,
+          "increment": 1,
+          "progressionTypes": [
+            "steady",
+            "stepped"
+          ]
+        }
+      }
+    },
+    {
+      "id": "freemotion-recumbent-bike-aquatic-center",
+      "name": "Freemotion Recumbent Stationary Bike - Aquatic Center",
+      "activityTypeId": "stationary-bike",
+      "variables": {
+        "cadence": {
+          "controlMode": "user-produced",
+          "progressionTypes": [
+            "steady",
+            "linear",
+            "stepped"
+          ]
+        },
+        "resistance": {
+          "controlMode": "machine-set",
+          "min": 1,
+          "max": 20,
+          "increment": 1,
+          "progressionTypes": [
+            "steady",
+            "stepped"
+          ]
+        }
+      }
+    }
+  ]
+}

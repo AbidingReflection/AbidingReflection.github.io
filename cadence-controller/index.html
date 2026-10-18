@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <title>Cadence Controller</title>
+
+        <meta name="theme-color" content="#101318" />
+
+        <link rel="manifest" href="./manifest.webmanifest" />
+
+        <link rel="stylesheet" href="./css/main.css" />
+
+        <link rel="stylesheet" href="./css/regions/controller-header.css" />
+        <link rel="stylesheet" href="./css/regions/workout-status.css" />
+
+        <link rel="stylesheet" href="./css/playback/playback-countdown.css" />
+        <link rel="stylesheet" href="./css/playback/guidance.css" />
+
+        <link rel="stylesheet" href="./css/regions/progress-pane.css" />
+
+        <link rel="stylesheet" href="./css/playback/playback-controls.css" />
+        <link rel="stylesheet" href="./css/playback/change-workout-panel.css" />
+
+        <link rel="stylesheet" href="./css/components/progression-circle.css" />
+        <link rel="stylesheet" href="./css/components/progress-track.css" />
+        <link rel="stylesheet" href="./css/components/signal-bank.css" />
+    </head>
+
+    <body>
+        <main class="cadence-controller">
+            <header class="controller-header">
+                <div>
+                    <p class="controller-header__app-name">Cadence Controller</p>
+
+                    <h1 id="protocol-title" class="controller-header__protocol-title">
+                        Loading protocol...
+                    </h1>
+                </div>
+
+                <div id="playback-state" class="playback-state" aria-live="polite">Idle</div>
+            </header>
+
+            <section class="workout-status" aria-label="Workout status">
+                <div class="workout-status__primary">
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Current Phase </span>
+
+                        <span id="current-phase" class="workout-status__value"> — </span>
+                    </div>
+
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Phase Remaining </span>
+
+                        <span
+                            id="phase-remaining-time"
+                            class="workout-status__value workout-status__value--time"
+                        >
+                            —
+                        </span>
+                    </div>
+
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Current Block </span>
+
+                        <span id="current-block" class="workout-status__value"> — </span>
+                    </div>
+                </div>
+
+                <div class="workout-status__upcoming">
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Next Phase </span>
+
+                        <span id="next-phase" class="workout-status__value"> — </span>
+                    </div>
+
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Next Block </span>
+
+                        <span id="next-block" class="workout-status__value"> — </span>
+                    </div>
+                </div>
+
+                <div class="workout-status__time">
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Elapsed </span>
+
+                        <span
+                            id="elapsed-time"
+                            class="workout-status__value workout-status__value--time"
+                        >
+                            0:00
+                        </span>
+                    </div>
+
+                    <div class="workout-status__metric">
+                        <span class="workout-status__label"> Workout Remaining </span>
+
+                        <span
+                            id="remaining-time"
+                            class="workout-status__value workout-status__value--time"
+                        >
+                            0:00
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="guidance-pane" aria-labelledby="guidance-heading">
+                <h2 id="guidance-heading" class="visually-hidden">Workout Guidance</h2>
+
+                <div
+                    id="cadence-visualizer"
+                    class="cadence-visualizer"
+                    aria-label="Cadence guidance"
+                ></div>
+
+                <div id="load-visualizer" class="load-visualizer" aria-label="Load guidance"></div>
+            </section>
+
+            <section class="progress-pane" aria-label="Workout progress">
+                <div class="progress-pane__track">
+                    <div class="progress-pane__label">Block</div>
+                    <div id="block-progress" class="block-progress"></div>
+                </div>
+
+                <div class="progress-pane__track">
+                    <div class="progress-pane__label">Phase</div>
+                    <div id="phase-progress" class="phase-progress"></div>
+                </div>
+
+                <div class="progress-pane__track">
+                    <div class="progress-pane__label">Session</div>
+                    <div id="workout-progress" class="workout-progress"></div>
+                </div>
+            </section>
+
+            <section class="playback-controls" aria-label="Playback controls">
+                <button id="start-button" type="button" class="playback-control">Start</button>
+
+                <button id="pause-button" type="button" class="playback-control" disabled>
+                    Pause
+                </button>
+
+                <button id="resume-button" type="button" class="playback-control" disabled>
+                    Resume
+                </button>
+
+                <button id="stop-button" type="button" class="playback-control" disabled>
+                    Stop
+                </button>
+
+                <button id="change-workout-button" type="button" class="playback-control" disabled>
+                    Change
+                </button>
+            </section>
+            <div id="change-workout-panel" class="change-workout-panel" hidden>
+                <button id="skip-block-button" type="button" class="change-workout-panel__action">
+                    Skip Block
+                </button>
+
+                <button id="skip-phase-button" type="button" class="change-workout-panel__action">
+                    Skip Phase
+                </button>
+
+                <button
+                    id="finish-block-skip-phase-button"
+                    type="button"
+                    class="change-workout-panel__action"
+                >
+                    Finish Block, Then Skip Phase
+                </button>
+
+                <button
+                    id="finish-block-end-workout-button"
+                    type="button"
+                    class="change-workout-panel__action"
+                >
+                    Finish Block, Then End Workout
+                </button>
+
+                <button
+                    id="cancel-pending-action-button"
+                    type="button"
+                    class="change-workout-panel__action"
+                    hidden
+                >
+                    Cancel Pending Action
+                </button>
+
+                <button
+                    id="cancel-change-workout-button"
+                    type="button"
+                    class="change-workout-panel__action"
+                >
+                    Cancel
+                </button>
+            </div>
+
+            <div id="countdown" class="playback-countdown" aria-live="polite"></div>
+        </main>
+
+        <script type="module" src="./js/app.js"></script>
+    </body>
+</html>

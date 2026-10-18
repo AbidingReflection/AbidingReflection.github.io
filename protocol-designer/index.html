@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <title>Cardio Cadence Protocol Designer</title>
+
+        <link rel="stylesheet" href="/packages/ui/css/theme.css" />
+        <link rel="stylesheet" href="/packages/ui/css/base.css" />
+        <link rel="stylesheet" href="/packages/ui/css/pane.css" />
+        <link rel="stylesheet" href="/packages/ui/css/dialog.css" />
+        <link rel="stylesheet" href="/packages/graph/css/graph-theme.css" />
+        <link rel="stylesheet" href="/packages/graph/css/graph.css" />
+
+        <link rel="stylesheet" href="css/main.css" />
+        <link rel="stylesheet" href="css/top-ribbon.css" />
+        <link rel="stylesheet" href="css/graph-pane.css" />
+        <link rel="stylesheet" href="css/protocol-pane.css" />
+
+        <link rel="stylesheet" href="css/protocol/protocol-layout.css" />
+        <link rel="stylesheet" href="css/protocol/phase.css" />
+        <link rel="stylesheet" href="css/protocol/block.css" />
+        <link rel="stylesheet" href="css/protocol/block-editor.css" />
+
+        <link rel="stylesheet" href="css/totals-ribbon.css" />
+        <link rel="stylesheet" href="css/protocol-open.css" />
+    </head>
+
+    <body>
+        <header class="top-ribbon">
+            <div class="app-brand">
+                <span class="app-brand__title">Cardio Cadence</span>
+
+                <div class="app-brand__section">
+                    <span>Protocol Designer</span>
+                    <span class="app-brand__separator" aria-hidden="true">—</span>
+                    <span class="app-brand__activity-type" id="protocol-activity-type-name"></span>
+                </div>
+            </div>
+
+            <nav class="top-ribbon__menu" aria-label="Application menu">
+                <div class="top-ribbon__menu-group">
+                    <button type="button" class="menu-button" id="protocol-new-button">New</button>
+
+                    <button
+                        type="button"
+                        class="menu-button menu-button--dropdown"
+                        id="protocol-open-button"
+                    >
+                        <span>Open</span>
+                        <span class="menu-button__caret" aria-hidden="true">▾</span>
+                    </button>
+
+                    <div class="menu-split-button">
+                        <button
+                            type="button"
+                            class="menu-button menu-split-button__primary"
+                            id="protocol-save-button"
+                        >
+                            Save
+                        </button>
+
+                        <button
+                            type="button"
+                            class="menu-button menu-split-button__dropdown"
+                            id="protocol-save-menu-button"
+                            aria-label="Open save menu"
+                            aria-haspopup="menu"
+                            aria-expanded="false"
+                            aria-controls="protocol-save-menu"
+                        >
+                            <span class="menu-button__caret" aria-hidden="true">▾</span>
+                        </button>
+
+                        <div class="menu-dropdown" id="protocol-save-menu" role="menu" hidden>
+                            <button
+                                type="button"
+                                class="menu-dropdown__item"
+                                id="protocol-save-as-button"
+                                role="menuitem"
+                            >
+                                Save As…
+                            </button>
+
+                            <button
+                                type="button"
+                                class="menu-dropdown__item"
+                                id="protocol-rename-button"
+                                role="menuitem"
+                            >
+                                Rename…
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="menu-button" id="protocol-import-button">
+                        Import
+                    </button>
+
+                    <input
+                        id="protocol-import-input"
+                        type="file"
+                        accept="application/json,.json"
+                        hidden
+                    />
+
+                    <button type="button" class="menu-button" id="protocol-export-button">
+                        Export
+                    </button>
+                </div>
+
+                <div class="top-ribbon__menu-group top-ribbon__menu-group--setup">
+                    <button
+                        type="button"
+                        class="menu-button menu-button--setup"
+                        id="protocol-setup-button"
+                    >
+                        <span class="menu-button__icon" aria-hidden="true">⚙</span>
+                        <span>Protocol Setup</span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <main class="workspace">
+            <section class="pane-layout" aria-label="Protocol designer workspace">
+                <section class="pane protocol-pane">
+                    <header class="pane__header protocol-pane__header">
+                        <div class="protocol-pane__heading">
+                            <span class="protocol-pane__title">Protocol</span>
+
+                            <span
+                                class="protocol-pane__machine-profile"
+                                id="protocol-machine-profile-name"
+                            ></span>
+                        </div>
+
+                        <div class="protocol-pane__actions">
+                            <button
+                                type="button"
+                                class="protocol-pane__action-button"
+                                id="manage-phases-button"
+                                aria-label="Edit phases"
+                                aria-pressed="false"
+                            >
+                                <span>Manage <u>P</u>hases</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="protocol-pane__action-button"
+                                id="manage-blocks-button"
+                                aria-label="Edit blocks"
+                                aria-pressed="false"
+                            >
+                                <span>Manage <u>B</u>locks</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="pane__content protocol-content" id="protocol-content">
+                        <div class="protocol-tree" id="protocol-tree"></div>
+                    </div>
+                </section>
+
+                <div class="graph-stack">
+                    <section
+                        class="pane graph-pane graph-pane--cadence"
+                        data-graph-id="cadence"
+                        data-collapsed="false"
+                    >
+                        <header class="pane__header graph-pane__header">
+                            <span>Cadence</span>
+
+                            <button
+                                type="button"
+                                class="graph-pane__toggle"
+                                data-graph-toggle="cadence"
+                                aria-label="Collapse cadence graph"
+                                aria-controls="cadence-graph"
+                                aria-expanded="true"
+                            >
+                                ▲
+                            </button>
+                        </header>
+
+                        <div class="pane__content graph-pane__content" id="cadence-graph"></div>
+                    </section>
+
+                    <section
+                        class="pane graph-pane graph-pane--load"
+                        data-graph-id="load"
+                        data-collapsed="false"
+                    >
+                        <header class="pane__header graph-pane__header">
+                            <span>Load</span>
+
+                            <button
+                                type="button"
+                                class="graph-pane__toggle"
+                                data-graph-toggle="load"
+                                aria-label="Toggle load graph"
+                                aria-controls="load-graph"
+                                aria-expanded="true"
+                            >
+                                <span aria-hidden="true">▾</span>
+                            </button>
+                        </header>
+
+                        <div class="pane__content graph-pane__content" id="load-graph"></div>
+                    </section>
+
+                    <section
+                        class="pane graph-pane graph-pane--calorie-rate"
+                        data-graph-id="calorie-rate"
+                        data-collapsed="false"
+                    >
+                        <header class="pane__header graph-pane__header">
+                            <span>Calorie Rate</span>
+
+                            <button
+                                type="button"
+                                class="graph-pane__toggle"
+                                data-graph-toggle="calorie-rate"
+                                aria-label="Toggle calorie rate graph"
+                                aria-controls="calorie-rate-graph"
+                                aria-expanded="true"
+                            >
+                                <span aria-hidden="true">▾</span>
+                            </button>
+                        </header>
+
+                        <div
+                            class="pane__content graph-pane__content"
+                            id="calorie-rate-graph"
+                        ></div>
+                    </section>
+
+                    <section
+                        class="pane graph-pane graph-pane--cumulative-calories"
+                        data-graph-id="cumulative-calories"
+                        data-collapsed="false"
+                    >
+                        <header class="pane__header graph-pane__header">
+                            <span>Cumulative Calories</span>
+
+                            <button
+                                type="button"
+                                class="graph-pane__toggle"
+                                data-graph-toggle="cumulative-calories"
+                                aria-label="Toggle cumulative calories graph"
+                                aria-controls="cumulative-calories-graph"
+                                aria-expanded="true"
+                            >
+                                <span aria-hidden="true">▾</span>
+                            </button>
+                        </header>
+
+                        <div
+                            class="pane__content graph-pane__content"
+                            id="cumulative-calories-graph"
+                        ></div>
+                    </section>
+                </div>
+            </section>
+        </main>
+
+        <aside class="totals-ribbon" aria-label="Protocol totals">
+            <div class="total">
+                <span class="total__label">Duration</span>
+                <span class="total__value" id="protocol-total-duration">00:00</span>
+            </div>
+
+            <div class="total">
+                <span class="total__label">Machine Calorie Estimate</span>
+                <span class="total__value" id="protocol-total-calories">—</span>
+            </div>
+        </aside>
+
+        <dialog class="app-dialog protocol-open-dialog" id="protocol-open-dialog">
+            <div class="app-dialog__content protocol-open-dialog__content">
+                <header class="app-dialog__header protocol-open-dialog__header">
+                    <div>
+                        <h2 class="app-dialog__title protocol-open-dialog__title">Open Protocol</h2>
+
+                        <p class="app-dialog__description protocol-open-dialog__description">
+                            Select a protocol from your library.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="app-dialog__close-button protocol-open-dialog__close-button"
+                        id="protocol-open-close-button"
+                        aria-label="Close open protocol dialog"
+                    >
+                        ×
+                    </button>
+                </header>
+
+                <div
+                    class="protocol-open-dialog__table-container"
+                    id="protocol-open-table"
+                    tabindex="0"
+                ></div>
+
+                <footer class="app-dialog__footer protocol-open-dialog__footer">
+                    <button
+                        type="button"
+                        class="app-dialog__button protocol-open-dialog__button"
+                        id="protocol-open-cancel-button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="app-dialog__button app-dialog__button--primary protocol-open-dialog__button protocol-open-dialog__button--primary"
+                        id="protocol-open-confirm-button"
+                        disabled
+                    >
+                        Open Protocol
+                    </button>
+                </footer>
+            </div>
+        </dialog>
+
+        <dialog class="app-dialog protocol-save-dialog" id="protocol-save-dialog">
+            <div class="app-dialog__content protocol-save-dialog__content">
+                <header class="app-dialog__header protocol-save-dialog__header">
+                    <div>
+                        <h2
+                            class="app-dialog__title protocol-save-dialog__title"
+                            id="protocol-save-dialog-title"
+                        >
+                            Save Protocol
+                        </h2>
+
+                        <p
+                            class="app-dialog__description protocol-save-dialog__description"
+                            id="protocol-save-dialog-description"
+                        >
+                            Save the current protocol to the protocol library.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="app-dialog__close-button protocol-save-dialog__close-button"
+                        id="protocol-save-close-button"
+                        aria-label="Close protocol save dialog"
+                    >
+                        ×
+                    </button>
+                </header>
+
+                <div class="app-dialog__section protocol-save-dialog__section">
+                    <div class="app-dialog__field protocol-save-dialog__field">
+                        <label
+                            class="app-dialog__label protocol-save-dialog__label"
+                            for="protocol-save-display-name"
+                        >
+                            Protocol Name
+                        </label>
+
+                        <input
+                            type="text"
+                            class="app-dialog__control protocol-save-dialog__input"
+                            id="protocol-save-display-name"
+                        />
+
+                        <p
+                            class="app-dialog__hint protocol-save-dialog__hint"
+                            id="protocol-save-name-hint"
+                        >
+                            This name identifies the protocol in your library.
+                        </p>
+                    </div>
+
+                    <div
+                        class="app-dialog__field protocol-save-dialog__field"
+                        id="protocol-save-change-summary-field"
+                    >
+                        <label
+                            class="app-dialog__label protocol-save-dialog__label"
+                            for="protocol-save-change-summary"
+                        >
+                            Change Summary
+                        </label>
+
+                        <input
+                            type="text"
+                            class="app-dialog__control protocol-save-dialog__input"
+                            id="protocol-save-change-summary"
+                            placeholder="Optional"
+                        />
+                    </div>
+                </div>
+
+                <footer class="app-dialog__footer protocol-save-dialog__footer">
+                    <button
+                        type="button"
+                        class="app-dialog__button protocol-save-dialog__button"
+                        id="protocol-save-cancel-button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="app-dialog__button app-dialog__button--primary protocol-save-dialog__button protocol-save-dialog__button--primary"
+                        id="protocol-save-confirm-button"
+                    >
+                        Save
+                    </button>
+                </footer>
+            </div>
+        </dialog>
+
+        <dialog class="app-dialog protocol-setup-dialog" id="protocol-setup-dialog">
+            <div class="app-dialog__content protocol-setup-dialog__content">
+                <header class="app-dialog__header protocol-setup-dialog__header">
+                    <div>
+                        <h2 class="app-dialog__title protocol-setup-dialog__title">
+                            Current Protocol Setup
+                        </h2>
+
+                        <p class="app-dialog__description protocol-setup-dialog__description">
+                            Configure the activity type, machine profile, and calibration profile
+                            for the current protocol.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="app-dialog__close-button protocol-setup-dialog__close-button"
+                        id="protocol-setup-close-button"
+                        aria-label="Close protocol setup"
+                    >
+                        ×
+                    </button>
+                </header>
+
+                <div class="app-dialog__section protocol-setup-dialog__section">
+                    <div class="app-dialog__field protocol-setup-dialog__field">
+                        <label
+                            class="app-dialog__label protocol-setup-dialog__label"
+                            for="protocol-setup-activity-type"
+                        >
+                            Activity Type
+                        </label>
+
+                        <select
+                            id="protocol-setup-activity-type"
+                            class="app-dialog__control protocol-setup-dialog__select"
+                        ></select>
+                    </div>
+                </div>
+
+                <hr class="app-dialog__divider protocol-setup-dialog__divider" />
+
+                <div class="app-dialog__section protocol-setup-dialog__section">
+                    <div class="app-dialog__field protocol-setup-dialog__field">
+                        <label
+                            class="app-dialog__label protocol-setup-dialog__label"
+                            for="protocol-setup-machine-profile"
+                        >
+                            Machine Profile
+                        </label>
+
+                        <select
+                            id="protocol-setup-machine-profile"
+                            class="app-dialog__control protocol-setup-dialog__select"
+                        ></select>
+
+                        <p class="app-dialog__hint protocol-setup-dialog__hint">
+                            Available machines depend on the selected activity type.
+                        </p>
+                    </div>
+
+                    <div class="app-dialog__field protocol-setup-dialog__field">
+                        <label
+                            class="app-dialog__label protocol-setup-dialog__label"
+                            for="protocol-setup-calibration-profile"
+                        >
+                            Calibration Profile
+                        </label>
+
+                        <select
+                            id="protocol-setup-calibration-profile"
+                            class="app-dialog__control protocol-setup-dialog__select"
+                            disabled
+                        ></select>
+
+                        <p class="app-dialog__hint protocol-setup-dialog__hint">
+                            Calibration profiles are specific to the selected machine.
+                        </p>
+                    </div>
+                </div>
+
+                <footer class="app-dialog__footer protocol-setup-dialog__footer">
+                    <button
+                        type="button"
+                        class="app-dialog__button protocol-setup-dialog__button"
+                        id="protocol-setup-cancel-button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="app-dialog__button app-dialog__button--primary protocol-setup-dialog__button protocol-setup-dialog__button--primary"
+                        id="protocol-setup-apply-button"
+                        disabled
+                    >
+                        Apply
+                    </button>
+                </footer>
+            </div>
+        </dialog>
+
+        <script type="module" src="js/app.js"></script>
+    </body>
+</html>
